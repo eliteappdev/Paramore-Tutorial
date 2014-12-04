@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Transactions;
 using Common.Logging;
 using Tasks.Adapters.DataAccess;
 using Tasks.Model;
@@ -47,17 +48,20 @@ namespace Tasks.Ports.Commands
 
         public override void Execute()
         {
-            Task task = tasksDAO.FindById(taskId);
-            if (task != null)
+            using (var scope = new TransactionScope())
             {
-                task.CompletionDate = completionDate;
-                tasksDAO.Update(task);
+                Task task = tasksDAO.FindById(taskId);
+                if (task != null)
+                {
+                    task.CompletionDate = completionDate;
+                    tasksDAO.Update(task);
+                    scope.Complete();
+                }
+                else
+                {
+                    throw new ArgumentOutOfRangeException("Could not find the task to complete");
+                }
             }
-            else
-            {
-                throw new ArgumentOutOfRangeException("Could not find the task to complete");
-            }
-            
         }
     }
 }

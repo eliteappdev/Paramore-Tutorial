@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Transactions;
 using Common.Logging;
 using Tasks.Adapters.DataAccess;
 using Tasks.Model;
@@ -64,14 +65,19 @@ namespace Tasks.Ports.Commands
             logger.DebugFormat("Executing Edit Task command with Name: {0}, Description: {1}, DueDate: {2}", taskName, taskDescription, taskDueDate);
             if (IsValid())
             {
-                Task task = tasksDAO.FindById(taskId);
+                using (var scope = new TransactionScope())
+                {
+                    Task task = tasksDAO.FindById(taskId);
 
-                task.TaskName = taskName;
-                task.TaskDescription = taskDescription;
-                task.DueDate = taskDueDate;
+                    task.TaskName = taskName;
+                    task.TaskDescription = taskDescription;
+                    task.DueDate = taskDueDate;
 
-                tasksDAO.Update(task);
-                logger.DebugFormat("Finished executing Add Task, edited task with ID: {0} ", taskId);
+                    tasksDAO.Update(task);
+                    scope.Complete();
+
+                    logger.DebugFormat("Finished executing Add Task, edited task with ID: {0} ", taskId);
+                }
             }
             else
             {
